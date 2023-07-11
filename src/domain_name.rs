@@ -4,8 +4,11 @@ pub struct DomainName {
 }
 
 impl DomainName {
-    pub fn new(name: String) -> DomainName {
-        DomainName { inner: name }
+    pub fn new(name: &str) -> DomainName {
+        DomainName { inner: name.to_string() }
+    }
+    pub fn empty() -> DomainName {
+        DomainName::new("")
     }
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut buf = Vec::with_capacity(self.inner.len());

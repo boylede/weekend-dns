@@ -5,6 +5,8 @@ use crate::deserialization::pop_u16;
 use crate::domain_name::DomainName;
 use crate::record::{Class, Kind};
 use crate::serialization::push_u16;
+use crate::record::Record;
+
 
 #[derive(Debug)]
 pub struct Packet {
@@ -17,14 +19,33 @@ pub struct Packet {
 }
 
 impl Packet {
+    pub fn new() -> Packet {
+        let id = rand::thread_rng().gen();
+        let flags = 1 << 8;
+        Packet {
+            id,
+            flags,
+            questions: vec![],
+            answers: vec![],
+            authorities: vec![],
+            additionals: vec![],
+        }
+    }
+    pub fn with_question(mut self, question: Question) -> Packet {
+        self.questions.push(question);
+        self
+    }
     pub fn build(domain: &str, kind: Kind) -> Packet {
-        let q = Question::build(domain.to_string(), kind);
+        let q = Question::build(domain, kind);
         let id = rand::thread_rng().gen();
         let flags = 1 << 8;
         Packet {
             id,
             flags,
             questions: vec![q],
+            answers: vec![],
+            authorities: vec![],
+            additionals: vec![],
         }
     }
     pub fn with_id(mut self, id: u16) -> Packet {
@@ -93,6 +114,7 @@ impl Header {
         })
     }
 }
+
 #[derive(Debug)]
 pub struct Question {
     name: DomainName,
@@ -101,7 +123,18 @@ pub struct Question {
 }
 
 impl Question {
-    pub fn build(name: String, kind: Kind) -> Question {
+    pub fn new() -> Question {
+        Question {
+            name: DomainName::empty(),
+            kind: Kind::A,
+            class: Class::Internet,
+        }
+    }
+    pub fn with_domain_name(mut self, name: &str) -> Question {
+        self.name = DomainName::new(name);
+        self
+    }
+    pub fn build(name: &str, kind: Kind) -> Question {
         let name = DomainName::new(name);
         Question {
             name,
