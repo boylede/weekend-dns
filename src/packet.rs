@@ -11,6 +11,9 @@ pub struct Packet {
     id: u16,
     flags: u16,
     questions: Vec<Question>,
+    answers: Vec<Record>,
+    authorities: Vec<Record>,
+    additionals: Vec<Record>,
 }
 
 impl Packet {
