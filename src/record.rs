@@ -1,3 +1,21 @@
+use crate::domain_name::DomainName;
+
+#[derive(Debug, Clone)]
+pub struct Record {
+    name: DomainName,
+    kind: Kind,
+    class: Class,
+    ttl: i32,
+    data: Content,
+}
+
+#[derive(Debug, Clone)]
+pub enum Content {
+    IPv4,
+    IPv6,
+    DomainName(DomainName),
+}
+
 #[derive(Debug, Copy, Clone)]
 pub enum Kind {
     A = 1,      // a host address

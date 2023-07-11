@@ -5,7 +5,6 @@ use std::net::UdpSocket;
 use weekend_dns::{
     packet::*,
     record::{Class, Kind},
-    response::*,
     serialization::to_hex_bytes,
 };
 
