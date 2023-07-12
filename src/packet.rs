@@ -1,7 +1,7 @@
 use rand::Rng;
-use std::fmt::{Write, Display};
+use std::fmt::{Display, Write};
 
-use crate::deserialization::{pop_u16, FromBytes, pop_collection};
+use crate::deserialization::{pop_collection, pop_u16, FromBytes};
 use crate::domain_name::DomainName;
 use crate::record::Record;
 use crate::record::{Class, Kind};
@@ -95,30 +95,41 @@ impl Packet {
 
 impl Display for Packet {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    //     id: u16,
-    // flags: u16,
-    // questions: Vec<Question>,
-    // answers: Vec<Record>,
-    // authorities: Vec<Record>,
-    // additionals: Vec<Record>,
+        //     id: u16,
+        // flags: u16,
+        // questions: Vec<Question>,
+        // answers: Vec<Record>,
+        // authorities: Vec<Record>,
+        // additionals: Vec<Record>,
         write!(f, "Packet#{:x} w/{:x}\n", self.id, self.flags)?;
-        write!(f, "\tQuestions: {}\n", self.questions.len())?;
-        for q in self.questions.iter() {
-            write!(f, "\t\t{}\n", q)?;
+        if self.questions.len() == 0 && self.answers.len() == 0 && self.authorities.len() == 0 && self.additionals.len() ==0 {
+            write!(f, "Empty Packet")?;
         }
-        write!(f, "\tAnswers: {}\n", self.answers.len())?;
-        for q in self.answers.iter() {
-            write!(f, "\t\t{}\n", q)?;
+        if self.questions.len() > 0 {
+            write!(f, "\tQuestions: {}\n", self.questions.len())?;
+            for q in self.questions.iter() {
+                write!(f, "\t\t{}\n", q)?;
+            }
         }
-        write!(f, "\tAuthorities: {}\n", self.authorities.len())?;
-        for q in self.authorities.iter() {
-            write!(f, "\t\t{}\n", q)?;
+        if self.answers.len() > 0 {
+            write!(f, "\tAnswers: {}\n", self.answers.len())?;
+            for q in self.answers.iter() {
+                write!(f, "\t\t{}\n", q)?;
+            }
         }
-        write!(f, "\tAdditionals: {}\n", self.additionals.len())?;
-        for q in self.additionals.iter() {
-            write!(f, "\t\t{}\n", q)?;
+        if self.authorities.len() > 0 {
+            write!(f, "\tAuthorities: {}\n", self.authorities.len())?;
+            for q in self.authorities.iter() {
+                write!(f, "\t\t{}\n", q)?;
+            }
         }
-        Ok(())
+        if self.additionals.len() > 0 {
+            write!(f, "\tAdditionals: {}\n", self.additionals.len())?;
+            for q in self.additionals.iter() {
+                write!(f, "\t\t{}\n", q)?;
+            }
+        }
+        writeln!(f, "")
     }
 }
 
@@ -212,6 +223,6 @@ impl FromBytes for Question {
         let name = DomainName::from_bytes(buf, cursor)?;
         let kind = Kind::from_bytes(buf, cursor)?;
         let class = Class::from_bytes(buf, cursor)?;
-        Some(Question{ name, kind, class })
+        Some(Question { name, kind, class })
     }
 }
