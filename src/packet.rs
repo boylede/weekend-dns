@@ -7,6 +7,18 @@ use crate::record::Record;
 use crate::record::{Class, Kind};
 use crate::serialization::push_u16;
 
+pub struct Flags (u16);
+
+impl Flags {
+    pub fn new() -> Flags {
+        Flags(0)
+    }
+    pub fn with_recusion(mut self) -> Flags {
+        self.0 |= 1 << 8;
+        self
+    }
+}
+
 #[derive(Debug)]
 pub struct Packet {
     id: u16,
@@ -20,7 +32,7 @@ pub struct Packet {
 impl Packet {
     pub fn new() -> Packet {
         let id = rand::thread_rng().gen();
-        let flags = 1 << 8;
+        let flags = 0;
         Packet {
             id,
             flags,
@@ -30,23 +42,28 @@ impl Packet {
             additionals: vec![],
         }
     }
+
+    pub fn with_flags(mut self, flags: Flags) -> Packet {
+        self.flags = flags.0;
+        self
+    }
     pub fn with_question(mut self, question: Question) -> Packet {
         self.questions.push(question);
         self
     }
-    pub fn build(domain: &str, kind: Kind) -> Packet {
-        let q = Question::build(domain, kind);
-        let id = rand::thread_rng().gen();
-        let flags = 1 << 8;
-        Packet {
-            id,
-            flags,
-            questions: vec![q],
-            answers: vec![],
-            authorities: vec![],
-            additionals: vec![],
-        }
-    }
+    // pub fn build(domain: &str, kind: Kind) -> Packet {
+    //     let q = Question::build(domain, kind);
+    //     let id = rand::thread_rng().gen();
+    //     let flags = 0;
+    //     Packet {
+    //         id,
+    //         flags,
+    //         questions: vec![q],
+    //         answers: vec![],
+    //         authorities: vec![],
+    //         additionals: vec![],
+    //     }
+    // }
     pub fn with_id(mut self, id: u16) -> Packet {
         self.id = id;
         self
@@ -93,9 +110,42 @@ impl Packet {
     }
 }
 
+fn flag_write(f: &mut std::fmt::Formatter<'_>, flags: &u16, offset: usize, zero_label: &str, one_label: &str)  -> std::fmt::Result {
+    let label = if  (flags & (0b1 << offset)) == (0b1 << offset) {
+        one_label
+    } else {
+        zero_label
+    };
+    write!(f, "{label}")
+}
+
 impl Display for Packet {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Packet#{:x} w/{:x}\n", self.id, self.flags)?;
+        write!(f, "Packet#{:x} (", self.id)?;
+        {
+            flag_write(f, &self.flags, 0, "Qr-", "qR-")?;
+            // if  (self.flags & (1 << 0)) == (1 << 0) {
+            //     write!(f, "Qr ")?;
+            // } else {
+            //     write!(f, "qR ")?;
+            // }
+
+            let opcode = (self.flags >> 1) & 0b1111;
+            write!(f, "{opcode:02x}-")?;
+
+            flag_write(f, &self.flags, 5, "aa-", "AA-")?;
+            flag_write(f, &self.flags, 6, "tc-", "TC-")?;
+            flag_write(f, &self.flags, 7, "rd-", "RD-")?;
+            flag_write(f, &self.flags, 8, "ra-", "RA-")?;
+            flag_write(f, &self.flags, 9, "z-", "Z-")?;
+            flag_write(f, &self.flags, 10, "ad-", "AD-")?;
+            flag_write(f, &self.flags, 11, "cd-", "CD-")?;
+
+            let rcode = (self.flags >> 12) & 0b1111;
+            write!(f, "{rcode:02x}")?;
+
+            writeln!(f, ")")?;
+        }
         if self.questions.len() == 0 && self.answers.len() == 0 && self.authorities.len() == 0 && self.additionals.len() ==0 {
             write!(f, "Empty Packet")?;
         }
