@@ -1,5 +1,5 @@
 use rand::Rng;
-use std::fmt::Write;
+use std::{fmt::Write, env};
 use std::net::UdpSocket;
 
 use weekend_dns::{
@@ -9,7 +9,10 @@ use weekend_dns::{
 };
 
 fn main() {
-    let query = Packet::build("www.facebook.com", Kind::A);
+    let mut args = env::args();
+    let _ = args.next();
+    let domain_str = args.next().unwrap_or("www.google.com".to_string());
+    let query = Packet::build(&domain_str, Kind::A);
 
     let Ok(socket) = UdpSocket::bind("0.0.0.0:5353") else {
         println!("failed to bind to port");

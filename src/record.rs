@@ -22,13 +22,18 @@ impl Display for Record {
         use Kind::*;
         match self.kind {
             A => {
-                for byte in self.data.iter() {
-                    write!(f, "{byte:#x} ")?;
+                let last = self.data.len() - 1;
+                for(i, byte) in self.data.iter().enumerate() {
+                    if i != last {
+                        write!(f, "{byte}:")?;
+                    } else {
+                        write!(f, "{byte} ")?;
+                    }
                 }
             },
-            NS => todo!(),
-            MD => todo!(),
-            MF => todo!(),
+            // NS => todo!(),
+            // MD => todo!(),
+            // MF => todo!(),
             CNAME => {
                 match DomainName::from_bytes(&self.data, &mut 0) {
                     Some(canonical) => {
@@ -41,17 +46,35 @@ impl Display for Record {
                     }
                 };
             },
-            SOA => todo!(),
-            MB => todo!(),
-            MG => todo!(),
-            MR => todo!(),
-            NULL => todo!(),
-            WKS => todo!(),
-            PTR => todo!(),
-            HINFO => todo!(),
-            MINFO => todo!(),
-            MX => todo!(),
-            TXT => todo!(),
+            SOA => {
+                match DomainName::from_bytes(&self.data, &mut 0) {
+                    Some(canonical) => {
+                        write!(f, "{}", canonical)?;
+                    }
+                    None => {
+                        for byte in self.data.iter() {
+                            write!(f, "{byte:#x}")?;
+                        }
+                    }
+                };
+            },
+            // MB => todo!(),
+            // MG => todo!(),
+            // MR => todo!(),
+            // NULL => todo!(),
+            // WKS => todo!(),
+            // PTR => todo!(),
+            // HINFO => todo!(),
+            // MINFO => todo!(),
+            // MX => todo!(),
+            // TXT => todo!(),
+            _ => {
+                for(i, byte) in self.data.iter().enumerate() {
+                    
+                        write!(f, "{byte:x},")?;
+                    
+                }
+            }
         }
         Ok(())
     }
