@@ -1,6 +1,12 @@
-use std::{fmt::Display, net::{Ipv4Addr, Ipv6Addr}};
+use std::{
+    fmt::Display,
+    net::{Ipv4Addr, Ipv6Addr},
+};
 
-use crate::{domain_name::DomainName, deserialization::{FromBytes, pop_u16, pop_collection}};
+use crate::{
+    deserialization::{pop_collection, pop_u16, FromBytes},
+    domain_name::DomainName,
+};
 
 #[derive(Debug, Clone)]
 pub struct Record {
@@ -39,19 +45,18 @@ impl FromBytes for Record {
                     let ip = <Ipv4Addr as FromBytes>::from_bytes(buf, cursor)?;
                     Content::IPv4(ip)
                 }
-                
-            },
+            }
             // NS => todo!(),
             // MD => todo!(),
             // MF => todo!(),
             CNAME => {
                 let domain = <DomainName as FromBytes>::from_bytes(buf, cursor)?;
                 Content::DomainName(domain)
-            },
+            }
             SOA => {
                 let domain = <DomainName as FromBytes>::from_bytes(buf, cursor)?;
                 Content::DomainName(domain)
-            },
+            }
             // MB => todo!(),
             // MG => todo!(),
             // MR => todo!(),
@@ -67,10 +72,15 @@ impl FromBytes for Record {
                 Content::Other(data)
             }
         };
-        Some(Record { name, kind, class, ttl, data })
+        Some(Record {
+            name,
+            kind,
+            class,
+            ttl,
+            data,
+        })
     }
 }
-
 
 #[derive(Debug, Clone)]
 pub enum Content {
@@ -91,14 +101,15 @@ impl Display for Content {
                     write!(f, "{byte:02x} ")?;
                 }
                 Ok(())
-            },
+            }
         }
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Default)]
 pub enum Kind {
     /// a host address
+    #[default]
     A = 1,
     /// an authoritative name server
     NS = 2,
@@ -154,14 +165,14 @@ impl TryFrom<u16> for Kind {
             14 => Ok(MINFO),
             15 => Ok(MX),
             16 => Ok(TXT),
-            _ => Err(())
+            _ => Err(()),
         }
     }
 }
 
 impl Display for Kind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let s= match self {
+        let s = match self {
             Kind::A => "A",
             Kind::NS => "NS",
             Kind::MD => "MD",
@@ -190,8 +201,9 @@ impl FromBytes for Kind {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Default)]
 pub enum Class {
+    #[default]
     Internet = 1,
 }
 impl TryFrom<u16> for Class {
@@ -201,14 +213,14 @@ impl TryFrom<u16> for Class {
         use Class::*;
         match value {
             1 => Ok(Internet),
-            _ => Err(())
+            _ => Err(()),
         }
     }
 }
 
 impl Display for Class {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let s= match self {
+        let s = match self {
             Class::Internet => "IN",
         };
         write!(f, "{s}")

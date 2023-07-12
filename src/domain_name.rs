@@ -1,8 +1,8 @@
 use std::fmt::Display;
 
-use crate::deserialization::{pop_collection, pop_u16, pop_u8, FromBytes};
+use crate::deserialization::{pop_collection, pop_u8, FromBytes};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct DomainName {
     inner: String,
 }
@@ -52,7 +52,7 @@ impl FromBytes for DomainName {
                     let DomainName { inner: ending } =
                         <DomainName as FromBytes>::from_bytes(buf, &mut pointer)?;
                     let mut start = parts.join(".");
-                    if start.len() > 0 {
+                    if start.is_empty() {
                         start.push('.');
                     }
                     start.push_str(&ending);

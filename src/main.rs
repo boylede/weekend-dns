@@ -1,12 +1,7 @@
-use rand::Rng;
+use std::env;
 use std::net::UdpSocket;
-use std::{env, fmt::Write};
 
-use weekend_dns::{
-    packet::*,
-    record::{Class, Kind},
-    serialization::to_hex_bytes,
-};
+use weekend_dns::packet::*;
 
 fn main() {
     let mut args = env::args();
@@ -20,7 +15,7 @@ fn main() {
 
     {
         let query = Packet::new()
-            .with_flags(Flags::new().with_recusion())
+            .with_flags(Flags::new())
             .with_question(Question::new().with_domain_name(&domain_str));
         println!("Sending query: {}", query);
         let buf = query.to_bytes();
@@ -30,7 +25,7 @@ fn main() {
     }
     {
         let mut buf = [0u8; 1024];
-        let Ok((length, a)) = socket.recv_from(&mut buf) else {
+        let Ok(_) = socket.recv_from(&mut buf) else {
             println!("failed to receive anything");
             return;
         };

@@ -1,5 +1,5 @@
 use rand::Rng;
-use std::fmt::{Display, Write};
+use std::fmt::Display;
 
 use crate::deserialization::{pop_collection, pop_u16, FromBytes};
 use crate::domain_name::DomainName;
@@ -7,7 +7,8 @@ use crate::record::Record;
 use crate::record::{Class, Kind};
 use crate::serialization::push_u16;
 
-pub struct Flags (u16);
+#[derive(Default, Clone, Copy)]
+pub struct Flags(u16);
 
 impl Flags {
     pub fn new() -> Flags {
@@ -19,7 +20,7 @@ impl Flags {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default, Clone)]
 pub struct Packet {
     id: u16,
     flags: u16,
@@ -110,8 +111,14 @@ impl Packet {
     }
 }
 
-fn flag_write(f: &mut std::fmt::Formatter<'_>, flags: &u16, offset: usize, zero_label: &str, one_label: &str)  -> std::fmt::Result {
-    let label = if  (flags & (0b1 << offset)) == (0b1 << offset) {
+fn flag_write(
+    f: &mut std::fmt::Formatter<'_>,
+    flags: &u16,
+    offset: usize,
+    zero_label: &str,
+    one_label: &str,
+) -> std::fmt::Result {
+    let label = if (flags & (0b1 << offset)) == (0b1 << offset) {
         one_label
     } else {
         zero_label
@@ -146,34 +153,38 @@ impl Display for Packet {
 
             writeln!(f, ")")?;
         }
-        if self.questions.len() == 0 && self.answers.len() == 0 && self.authorities.len() == 0 && self.additionals.len() ==0 {
+        if self.questions.is_empty()
+            && self.answers.is_empty()
+            && self.authorities.is_empty()
+            && self.additionals.is_empty()
+        {
             write!(f, "Empty Packet")?;
         }
-        if self.questions.len() > 0 {
-            write!(f, "\tQuestions: {}\n", self.questions.len())?;
+        if self.questions.is_empty() {
+            writeln!(f, "\tQuestions: {}", self.questions.len())?;
             for q in self.questions.iter() {
-                write!(f, "\t\t{}\n", q)?;
+                writeln!(f, "\t\t{}", q)?;
             }
         }
-        if self.answers.len() > 0 {
-            write!(f, "\tAnswers: {}\n", self.answers.len())?;
+        if self.answers.is_empty() {
+            writeln!(f, "\tAnswers: {}", self.answers.len())?;
             for q in self.answers.iter() {
-                write!(f, "\t\t{}\n", q)?;
+                writeln!(f, "\t\t{}", q)?;
             }
         }
-        if self.authorities.len() > 0 {
-            write!(f, "\tAuthorities: {}\n", self.authorities.len())?;
+        if self.authorities.is_empty() {
+            writeln!(f, "\tAuthorities: {}", self.authorities.len())?;
             for q in self.authorities.iter() {
-                write!(f, "\t\t{}\n", q)?;
+                writeln!(f, "\t\t{}", q)?;
             }
         }
-        if self.additionals.len() > 0 {
-            write!(f, "\tAdditionals: {}\n", self.additionals.len())?;
+        if self.additionals.is_empty() {
+            writeln!(f, "\tAdditionals: {}", self.additionals.len())?;
             for q in self.additionals.iter() {
-                write!(f, "\t\t{}\n", q)?;
+                writeln!(f, "\t\t{}", q)?;
             }
         }
-        writeln!(f, "")
+        writeln!(f)
     }
 }
 
@@ -216,7 +227,7 @@ impl Header {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Default)]
 pub struct Question {
     name: DomainName,
     kind: Kind,
