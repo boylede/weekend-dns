@@ -1,3 +1,5 @@
+use std::net::{Ipv4Addr, Ipv6Addr};
+
 pub fn pop_u16(buf: &[u8], cursor: &mut usize) -> Option<u16> {
     let hi = *buf.get(*cursor)? as u16;
     *cursor = *cursor + 1;
@@ -66,5 +68,37 @@ impl FromBytes for i32 {
 
         let num = a << 24 | b << 16 | c << 8 | d;
         Some(num as i32)
+    }
+}
+
+impl FromBytes for Ipv4Addr {
+    fn from_bytes(buf: &[u8], cursor: &mut usize) -> Option<Self> {
+        let mut cur = *cursor;
+        let a = *buf.get(cur)?;
+        cur += 1;
+        let b = *buf.get(cur)?;
+        cur += 1;
+        let c = *buf.get(cur)?;
+        cur += 1;
+        let d = *buf.get(cur)?;
+        cur += 1;
+        *cursor = cur;
+        Some(Ipv4Addr::new(a, b, c, d))
+    }
+}
+
+impl FromBytes for Ipv6Addr {
+    fn from_bytes(buf: &[u8], cursor: &mut usize) -> Option<Self> {
+        let mut cur = *cursor;
+        let a = pop_u16(buf, &mut cur)?;
+        let b = pop_u16(buf, &mut cur)?;
+        let c = pop_u16(buf, &mut cur)?;
+        let d = pop_u16(buf, &mut cur)?;
+        let e = pop_u16(buf, &mut cur)?;
+        let f = pop_u16(buf, &mut cur)?;
+        let g = pop_u16(buf, &mut cur)?;
+        let h = pop_u16(buf, &mut cur)?;
+        *cursor = cur;
+        Some(Ipv6Addr::new(a, b, c, d, e, f, g, h))
     }
 }

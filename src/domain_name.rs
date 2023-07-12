@@ -39,13 +39,7 @@ impl FromBytes for DomainName {
     fn from_bytes(buf: &[u8], cursor: &mut usize) -> Option<Self> {
         let max_cursor: usize = *cursor;
         let mut parts = Vec::new();
-        const MAX_LOOPS: usize = 256;
-        let mut counter: usize = 0;
         loop {
-            counter += 1;
-            if counter >= MAX_LOOPS {
-                return None;
-            }
             let len = pop_u8(buf, cursor)? as u16;
             if len == 0 {
                 break;
@@ -55,7 +49,6 @@ impl FromBytes for DomainName {
                 let mut pointer = (hi | lo) as usize;
                 if pointer < max_cursor {
                     // recurse
-
                     let DomainName { inner: ending } =
                         <DomainName as FromBytes>::from_bytes(buf, &mut pointer)?;
                     let mut start = parts.join(".");

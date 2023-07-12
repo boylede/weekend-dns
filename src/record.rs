@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{fmt::Display, net::{Ipv4Addr, Ipv6Addr}};
 
 use crate::{domain_name::DomainName, deserialization::{FromBytes, pop_u16, pop_collection}};
 
@@ -8,7 +8,7 @@ pub struct Record {
     kind: Kind,
     class: Class,
     ttl: i32,
-    data: Vec<u8>,
+    data: Content,
 }
 
 impl Display for Record {
@@ -19,44 +19,38 @@ impl Display for Record {
         write!(f, " ")?;
         <Class as Display>::fmt(&self.class, f)?;
         write!(f, " {} ", self.ttl)?;
+        write!(f, "{}", self.data)
+    }
+}
+
+impl FromBytes for Record {
+    fn from_bytes(buf: &[u8], cursor: &mut usize) -> Option<Self> {
+        let name = DomainName::from_bytes(buf, cursor)?;
+        let kind = Kind::from_bytes(buf, cursor)?;
+        let class = Class::from_bytes(buf, cursor)?;
+        let ttl = i32::from_bytes(buf, cursor)?;
+        let count = pop_u16(buf, cursor)?;
         use Kind::*;
-        match self.kind {
+        let data = match kind {
             A => {
-                let last = self.data.len() - 1;
-                for(i, byte) in self.data.iter().enumerate() {
-                    if i != last {
-                        write!(f, "{byte}:")?;
-                    } else {
-                        write!(f, "{byte} ")?;
-                    }
+                if let Some(ip6) = <Ipv6Addr as FromBytes>::from_bytes(buf, cursor) {
+                    Content::IPv6(ip6)
+                } else {
+                    let ip = <Ipv4Addr as FromBytes>::from_bytes(buf, cursor)?;
+                    Content::IPv4(ip)
                 }
+                
             },
             // NS => todo!(),
             // MD => todo!(),
             // MF => todo!(),
             CNAME => {
-                match DomainName::from_bytes(&self.data, &mut 0) {
-                    Some(canonical) => {
-                        write!(f, "{}", canonical)?;
-                    }
-                    None => {
-                        for byte in self.data.iter() {
-                            write!(f, "{byte:#x}")?;
-                        }
-                    }
-                };
+                let domain = <DomainName as FromBytes>::from_bytes(buf, cursor)?;
+                Content::DomainName(domain)
             },
             SOA => {
-                match DomainName::from_bytes(&self.data, &mut 0) {
-                    Some(canonical) => {
-                        write!(f, "{}", canonical)?;
-                    }
-                    None => {
-                        for byte in self.data.iter() {
-                            write!(f, "{byte:#x}")?;
-                        }
-                    }
-                };
+                let domain = <DomainName as FromBytes>::from_bytes(buf, cursor)?;
+                Content::DomainName(domain)
             },
             // MB => todo!(),
             // MG => todo!(),
@@ -69,25 +63,10 @@ impl Display for Record {
             // MX => todo!(),
             // TXT => todo!(),
             _ => {
-                for(i, byte) in self.data.iter().enumerate() {
-                    
-                        write!(f, "{byte:x},")?;
-                    
-                }
+                let data = pop_collection(buf, cursor, count as usize)?;
+                Content::Other(data)
             }
-        }
-        Ok(())
-    }
-}
-
-impl FromBytes for Record {
-    fn from_bytes(buf: &[u8], cursor: &mut usize) -> Option<Self> {
-        let name = DomainName::from_bytes(buf, cursor)?;
-        let kind = Kind::from_bytes(buf, cursor)?;
-        let class = Class::from_bytes(buf, cursor)?;
-        let ttl = i32::from_bytes(buf, cursor)?;
-        let count = pop_u16(buf, cursor)?;
-        let data = pop_collection(buf, cursor, count as usize)?;
+        };
         Some(Record { name, kind, class, ttl, data })
     }
 }
@@ -95,10 +74,26 @@ impl FromBytes for Record {
 
 #[derive(Debug, Clone)]
 pub enum Content {
-    IPv4,
-    IPv6,
+    IPv4(Ipv4Addr),
+    IPv6(Ipv6Addr),
     DomainName(DomainName),
-    DomainNameRef(usize),
+    Other(Vec<u8>),
+}
+
+impl Display for Content {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Content::IPv4(ip) => write!(f, "{ip}"),
+            Content::IPv6(ip) => write!(f, "{ip}"),
+            Content::DomainName(dn) => write!(f, "{dn}"),
+            Content::Other(bytes) => {
+                for byte in bytes.iter() {
+                    write!(f, "{byte:02x} ")?;
+                }
+                Ok(())
+            },
+        }
+    }
 }
 
 #[derive(Debug, Copy, Clone)]

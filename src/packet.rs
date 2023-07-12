@@ -95,12 +95,6 @@ impl Packet {
 
 impl Display for Packet {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        //     id: u16,
-        // flags: u16,
-        // questions: Vec<Question>,
-        // answers: Vec<Record>,
-        // authorities: Vec<Record>,
-        // additionals: Vec<Record>,
         write!(f, "Packet#{:x} w/{:x}\n", self.id, self.flags)?;
         if self.questions.len() == 0 && self.answers.len() == 0 && self.authorities.len() == 0 && self.additionals.len() ==0 {
             write!(f, "Empty Packet")?;
