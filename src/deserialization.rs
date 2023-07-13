@@ -21,8 +21,9 @@ pub fn pop_collection<T: FromBytes + Sized>(
 ) -> Option<Vec<T>> {
     let mut c = *cursor;
     let vec: Vec<T> = (0..count)
-        .map_while(|_index| -> Option<T> {
+        .map_while(|index| -> Option<T> {
             let Some(item) = <T as FromBytes>::from_bytes(buf, &mut c) else {
+                println!("failed to extract element {}", index);
                 return None};
             Some(item)
         })

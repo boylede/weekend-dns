@@ -10,11 +10,11 @@ use crate::{
 
 #[derive(Debug, Clone)]
 pub struct Record {
-    name: DomainName,
-    kind: Kind,
-    class: Class,
-    ttl: i32,
-    data: Content,
+    pub name: DomainName,
+    pub kind: Kind,
+    pub class: Class,
+    pub ttl: i32,
+    pub data: Content,
 }
 
 impl Display for Record {
@@ -36,17 +36,29 @@ impl FromBytes for Record {
         let class = Class::from_bytes(buf, cursor)?;
         let ttl = i32::from_bytes(buf, cursor)?;
         let count = pop_u16(buf, cursor)?;
+        let expected = *cursor + count as usize;
         use Kind::*;
         let data = match kind {
             A => {
-                if let Some(ip6) = <Ipv6Addr as FromBytes>::from_bytes(buf, cursor) {
-                    Content::IPv6(ip6)
-                } else {
+                if count == 4 {
                     let ip = <Ipv4Addr as FromBytes>::from_bytes(buf, cursor)?;
                     Content::IPv4(ip)
+                } else if count == 8 {
+                    let ip = <Ipv6Addr as FromBytes>::from_bytes(buf, cursor)?;
+                    Content::IPv6(ip)
+                } else {
+                    let data = pop_collection(buf, cursor, count as usize)?;
+                    Content::Other(data)
                 }
             }
-            // NS => todo!(),
+            AAAA => {
+                let ip = <Ipv6Addr as FromBytes>::from_bytes(buf, cursor)?;
+                    Content::IPv6(ip)
+            }
+            NS => {
+                let domain = <DomainName as FromBytes>::from_bytes(buf, cursor)?;
+                Content::DomainName(domain)
+            },
             // MD => todo!(),
             // MF => todo!(),
             CNAME => {
@@ -66,12 +78,16 @@ impl FromBytes for Record {
             // HINFO => todo!(),
             // MINFO => todo!(),
             // MX => todo!(),
-            // TXT => todo!(),
+            TXT => {
+                let text = pop_collection::<char>(buf, cursor, count as usize)?.iter().collect();
+                Content::Text(text)
+            },
             _ => {
                 let data = pop_collection(buf, cursor, count as usize)?;
                 Content::Other(data)
             }
         };
+        assert!(expected == *cursor, "Cursor was not moved as expected: {} vs {}", expected, *cursor);
         Some(Record {
             name,
             kind,
@@ -87,6 +103,7 @@ pub enum Content {
     IPv4(Ipv4Addr),
     IPv6(Ipv6Addr),
     DomainName(DomainName),
+    Text(String),
     Other(Vec<u8>),
 }
 
@@ -96,6 +113,7 @@ impl Display for Content {
             Content::IPv4(ip) => write!(f, "{ip}"),
             Content::IPv6(ip) => write!(f, "{ip}"),
             Content::DomainName(dn) => write!(f, "{dn}"),
+            Content::Text(text) => write!(f, "{text}"),
             Content::Other(bytes) => {
                 for byte in bytes.iter() {
                     write!(f, "{byte:02x} ")?;
@@ -108,9 +126,13 @@ impl Display for Content {
 
 #[derive(Debug, Copy, Clone, Default)]
 pub enum Kind {
+    /// illegal?
+    Undefined = 0,
     /// a host address
     #[default]
     A = 1,
+    /// an ipv6 address
+    AAAA = 28,
     /// an authoritative name server
     NS = 2,
     /// a mail destination (Obsolete - use MX)     
@@ -149,6 +171,7 @@ impl TryFrom<u16> for Kind {
     fn try_from(value: u16) -> Result<Self, Self::Error> {
         use Kind::*;
         match value {
+            0 => Ok(Undefined),
             1 => Ok(A),
             2 => Ok(NS),
             3 => Ok(MD),
@@ -165,7 +188,11 @@ impl TryFrom<u16> for Kind {
             14 => Ok(MINFO),
             15 => Ok(MX),
             16 => Ok(TXT),
-            _ => Err(()),
+            28 => Ok(AAAA),
+            _ => {
+                println!("failed to make Kind from {}", value);
+                Err(())
+            },
         }
     }
 }
@@ -173,7 +200,9 @@ impl TryFrom<u16> for Kind {
 impl Display for Kind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let s = match self {
+            Kind::Undefined => "???",
             Kind::A => "A",
+            Kind::AAAA => "AAAA",
             Kind::NS => "NS",
             Kind::MD => "MD",
             Kind::MF => "MF",

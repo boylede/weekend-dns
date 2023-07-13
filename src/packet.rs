@@ -1,11 +1,14 @@
 use rand::Rng;
 use std::fmt::Display;
+use std::net::Ipv4Addr;
 
 use crate::deserialization::{pop_collection, pop_u16, FromBytes};
 use crate::domain_name::DomainName;
 use crate::record::Record;
 use crate::record::{Class, Kind};
 use crate::serialization::push_u16;
+
+
 
 #[derive(Default, Clone, Copy)]
 pub struct Flags(u16);
@@ -22,12 +25,12 @@ impl Flags {
 
 #[derive(Debug, Default, Clone)]
 pub struct Packet {
-    id: u16,
-    flags: u16,
-    questions: Vec<Question>,
-    answers: Vec<Record>,
-    authorities: Vec<Record>,
-    additionals: Vec<Record>,
+    pub id: u16,
+    pub flags: u16,
+    pub questions: Vec<Question>,
+    pub answers: Vec<Record>,
+    pub authorities: Vec<Record>,
+    pub additionals: Vec<Record>,
 }
 
 impl Packet {
@@ -130,7 +133,7 @@ impl Display for Packet {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "Packet#{:x} (", self.id)?;
         {
-            flag_write(f, &self.flags, 0, "Qr-", "qR-")?;
+            flag_write(f, &self.flags, 0, "Q-", "R-")?;
             // if  (self.flags & (1 << 0)) == (1 << 0) {
             //     write!(f, "Qr ")?;
             // } else {
@@ -160,25 +163,25 @@ impl Display for Packet {
         {
             write!(f, "Empty Packet")?;
         }
-        if self.questions.is_empty() {
+        if !self.questions.is_empty() {
             writeln!(f, "\tQuestions: {}", self.questions.len())?;
             for q in self.questions.iter() {
                 writeln!(f, "\t\t{}", q)?;
             }
         }
-        if self.answers.is_empty() {
+        if !self.answers.is_empty() {
             writeln!(f, "\tAnswers: {}", self.answers.len())?;
             for q in self.answers.iter() {
                 writeln!(f, "\t\t{}", q)?;
             }
         }
-        if self.authorities.is_empty() {
+        if !self.authorities.is_empty() {
             writeln!(f, "\tAuthorities: {}", self.authorities.len())?;
             for q in self.authorities.iter() {
                 writeln!(f, "\t\t{}", q)?;
             }
         }
-        if self.additionals.is_empty() {
+        if !self.additionals.is_empty() {
             writeln!(f, "\tAdditionals: {}", self.additionals.len())?;
             for q in self.additionals.iter() {
                 writeln!(f, "\t\t{}", q)?;
@@ -244,6 +247,10 @@ impl Question {
     }
     pub fn with_domain_name(mut self, name: &str) -> Question {
         self.name = DomainName::new(name);
+        self
+    }
+    pub fn with_kind(mut self, kind: Kind) -> Question {
+        self.kind = kind;
         self
     }
     pub fn build(name: &str, kind: Kind) -> Question {
